@@ -66,7 +66,9 @@ export const createPost = asyncHandler(async (req, res) => {
   const imageFile = req.file;
 
   if (!content && !imageFile) {
-    return res.status(400).json({ error: "Post must contain either text or image" });
+    return res
+      .status(400)
+      .json({ error: "Post must contain either text or image" });
   }
 
   const user = await User.findOne({ clerkId: userId });
@@ -74,13 +76,11 @@ export const createPost = asyncHandler(async (req, res) => {
 
   let imageUrl = "";
 
-  // upload image to Cloudinary if provided
   if (imageFile) {
     try {
-      // convert buffer to base64 for cloudinary
-      const base64Image = `data:${imageFile.mimetype};base64,${imageFile.buffer.toString(
-        "base64"
-      )}`;
+      const base64Image = `data:${
+        imageFile.mimetype
+      };base64,${imageFile.buffer.toString("base64")}`;
 
       const uploadResponse = await cloudinary.uploader.upload(base64Image, {
         folder: "social_media_posts",
@@ -114,22 +114,20 @@ export const likePost = asyncHandler(async (req, res) => {
   const user = await User.findOne({ clerkId: userId });
   const post = await Post.findById(postId);
 
-  if (!user || !post) return res.status(404).json({ error: "User or post not found" });
+  if (!user || !post)
+    return res.status(404).json({ error: "User or post not found" });
 
   const isLiked = post.likes.includes(user._id);
 
   if (isLiked) {
-    // unlike
     await Post.findByIdAndUpdate(postId, {
       $pull: { likes: user._id },
     });
   } else {
-    // like
     await Post.findByIdAndUpdate(postId, {
       $push: { likes: user._id },
     });
 
-    // create notification if not liking own post
     if (post.user.toString() !== user._id.toString()) {
       await Notification.create({
         from: user._id,
@@ -152,16 +150,17 @@ export const deletePost = asyncHandler(async (req, res) => {
   const user = await User.findOne({ clerkId: userId });
   const post = await Post.findById(postId);
 
-  if (!user || !post) return res.status(404).json({ error: "User or post not found" });
+  if (!user || !post)
+    return res.status(404).json({ error: "User or post not found" });
 
   if (post.user.toString() !== user._id.toString()) {
-    return res.status(403).json({ error: "You can only delete your own posts" });
+    return res
+      .status(403)
+      .json({ error: "You can only delete your own posts" });
   }
 
-  // delete all comments on this post
   await Comment.deleteMany({ post: postId });
 
-  // delete the post
   await Post.findByIdAndDelete(postId);
 
   res.status(200).json({ message: "Post deleted successfully" });
