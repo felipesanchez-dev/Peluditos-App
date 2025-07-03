@@ -161,274 +161,53 @@ graph TB
 #### **1. Single Responsibility Principle (SRP)**
 Cada clase y módulo tiene una única razón para cambiar:
 
-```javascript
-// ✅ Correcto: Cada controlador maneja una entidad específica
-class UserController {
-  async getUserProfile(req, res) { /* Solo maneja perfiles de usuario */ }
-  async updateProfile(req, res) { /* Solo actualiza perfiles */ }
-}
-
-class PostController {
-  async createPost(req, res) { /* Solo maneja creación de posts */ }
-  async getPosts(req, res) { /* Solo obtiene posts */ }
-}
-```
 
 #### **2. Open/Closed Principle (OCP)**
 El sistema está abierto para extensión pero cerrado para modificación:
 
-```javascript
-// ✅ Base abstracta para controladores
-class BaseController {
-  constructor(service) {
-    this.service = service;
-  }
-
-  async handleRequest(req, res, operation) {
-    try {
-      const result = await operation();
-      res.status(200).json(result);
-    } catch (error) {
-      this.handleError(res, error);
-    }
-  }
-}
-
-// Extensión sin modificar la base
-class UserController extends BaseController {
-  constructor(userService) {
-    super(userService);
-  }
-  // Métodos específicos de usuario
-}
-```
 
 #### **3. Liskov Substitution Principle (LSP)**
 Los objetos derivados pueden sustituir a sus clases base:
 
-```javascript
-// ✅ Interface común para notificaciones
-class NotificationService {
-  async send(notification) {
-    throw new Error('Method must be implemented');
-  }
-}
-
-class EmailNotificationService extends NotificationService {
-  async send(notification) {
-    // Implementación específica para email
-  }
-}
-
-class PushNotificationService extends NotificationService {
-  async send(notification) {
-    // Implementación específica para push
-  }
-}
-```
 
 #### **4. Interface Segregation Principle (ISP)**
 Interfaces específicas en lugar de una general:
 
-```javascript
-// ✅ Interfaces segregadas
-class UserReadService {
-  async findById(id) { /* Solo lectura */ }
-  async findByUsername(username) { /* Solo lectura */ }
-}
-
-class UserWriteService {
-  async create(userData) { /* Solo escritura */ }
-  async update(id, userData) { /* Solo escritura */ }
-}
-```
 
 #### **5. Dependency Inversion Principle (DIP)**
 Dependencias de abstracciones, no de concreciones:
-
-```javascript
-// ✅ Inyección de dependencias
-class PostController {
-  constructor(postService, notificationService, uploadService) {
-    this.postService = postService;
-    this.notificationService = notificationService;
-    this.uploadService = uploadService;
-  }
-
-  async createPost(req, res) {
-    const imageUrl = await this.uploadService.upload(req.file);
-    const post = await this.postService.create({...req.body, imageUrl});
-    await this.notificationService.notifyFollowers(post);
-    res.json(post);
-  }
-}
-```
 
 ### 🏗️ Capas Arquitectónicas Detalladas
 
 #### **1. Capa de Presentación (Presentation Layer)**
 
-```javascript
-// routes/user.route.js - Definición de endpoints
-router.get('/profile/:username', getUserProfile);
-router.post('/sync', protectRoute, syncUser);
-router.put('/profile', protectRoute, updateProfile);
-
-// middleware/auth.middleware.js - Lógica de autenticación
-export const protectRoute = async (req, res, next) => {
-  if (!req.auth().isAuthenticated) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  next();
-};
-```
 
 #### **2. Capa de Aplicación (Application Layer)**
 
-```javascript
-// controllers/user.controller.js - Orquestación de casos de uso
-export const updateProfile = asyncHandler(async (req, res) => {
-  const { userId } = getAuth(req);
-  
-  // Validación de entrada
-  const validatedData = validateUserUpdate(req.body);
-  
-  // Caso de uso: actualizar perfil
-  const user = await UserService.updateProfile(userId, validatedData);
-  
-  // Respuesta
-  res.status(200).json({ user });
-});
-```
+
 
 #### **3. Capa de Dominio (Domain Layer)**
 
-```javascript
-// models/user.model.js - Entidades de dominio con reglas de negocio
-const userSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    validate: {
-      validator: function(v) {
-        return /^[a-zA-Z0-9_]+$/.test(v); // Regla de negocio
-      },
-      message: 'Username solo puede contener letras, números y guiones bajos'
-    }
-  },
-  // ...otros campos con validaciones de dominio
-});
 
-// Métodos de dominio
-userSchema.methods.canFollow = function(targetUser) {
-  return this._id.toString() !== targetUser._id.toString();
-};
-
-userSchema.methods.isFollowing = function(targetUserId) {
-  return this.following.includes(targetUserId);
-};
-```
 
 #### **4. Capa de Infraestructura (Infrastructure Layer)**
 
-```javascript
-// config/db.js - Acceso a datos
-export const connectDB = async () => {
-  try {
-    await mongoose.connect(ENV.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log("Connected to DB SUCCESSFULLY ✅");
-  } catch (error) {
-    console.log("Error connecting to MONGODB");
-    process.exit(1);
-  }
-};
-
-// config/cloudinary.js - Servicios externos
-cloudinary.config({
-  cloud_name: ENV.CLOUDINARY_CLOUD_NAME,
-  api_key: ENV.CLOUDINARY_API_KEY,
-  api_secret: ENV.CLOUDINARY_API_SECRET,
-});
-```
 
 ### 🎯 Patrones de Diseño Implementados
 
 #### **1. Repository Pattern**
 Abstracción del acceso a datos:
 
-```javascript
-class UserRepository {
-  async findById(id) {
-    return await User.findById(id).populate('followers following');
-  }
 
-  async findByUsername(username) {
-    return await User.findOne({ username });
-  }
-
-  async create(userData) {
-    return await User.create(userData);
-  }
-
-  async update(id, updateData) {
-    return await User.findByIdAndUpdate(id, updateData, { new: true });
-  }
-}
-```
 
 #### **2. Service Layer Pattern**
 Encapsulación de lógica de negocio:
 
-```javascript
-class PostService {
-  constructor(postRepository, notificationService) {
-    this.postRepository = postRepository;
-    this.notificationService = notificationService;
-  }
 
-  async createPost(userId, postData) {
-    // Validaciones de negocio
-    if (!postData.content && !postData.image) {
-      throw new Error('Post debe tener contenido o imagen');
-    }
-
-    // Crear post
-    const post = await this.postRepository.create({
-      user: userId,
-      ...postData
-    });
-
-    // Notificar a seguidores
-    await this.notificationService.notifyFollowers(userId, post);
-
-    return post;
-  }
-}
-```
 
 #### **3. Factory Pattern**
 Creación de objetos complejos:
 
-```javascript
-class NotificationFactory {
-  static create(type, data) {
-    switch (type) {
-      case 'follow':
-        return new FollowNotification(data);
-      case 'like_post':
-        return new LikePostNotification(data);
-      case 'comment':
-        return new CommentNotification(data);
-      default:
-        throw new Error(`Tipo de notificación no soportado: ${type}`);
-    }
-  }
-}
-```
 
 #### **4. Middleware Pattern**
 Cadena de responsabilidades:
@@ -602,7 +381,7 @@ peluditos/
 └── server/                          # 🏠 Directorio raíz del backend
     ├── 📄 package.json              # Dependencias y scripts npm
     ├── 📄 vercel.json               # Configuración de despliegue Vercel
-    ├── 📄 .env.example              # Plantilla de variables de entorno
+    ├── 📄 .env
     ├── 📄 .gitignore                # Archivos ignorados por Git
     ├── 📄 README.md                 # Documentación del proyecto
     └── src/                         # 📁 Código fuente principal
@@ -669,318 +448,6 @@ Definición de endpoints RESTful organizados por funcionalidad.
 
 ---
 
-## 📊 Modelos de Datos Detallados
-
-### 👤 User Model - Esquema Completo
-
-```javascript
-const userSchema = new mongoose.Schema({
-  clerkId: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true              // Índice para búsquedas rápidas
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,         // Normalización automática
-    trim: true
-  },
-  firstName: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 50
-  },
-  lastName: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 50
-  },
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true,
-    minlength: 3,
-    maxlength: 20,
-    match: /^[a-zA-Z0-9_]+$/  // Solo alfanuméricos y guiones bajos
-  },
-  profilePicture: {
-    type: String,
-    default: '',
-    validate: {
-      validator: function(v) {
-        return !v || /^https?:\/\/.+/.test(v);  // URL válida o vacío
-      },
-      message: 'URL de imagen inválida'
-    }
-  },
-  bannerImage: {
-    type: String,
-    default: ''
-  },
-  bio: {
-    type: String,
-    default: '',
-    maxlength: 160           // Límite tipo Twitter
-  },
-  location: {
-    type: String,
-    default: '',
-    maxlength: 100
-  },
-  followers: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  following: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  isVerified: {
-    type: Boolean,
-    default: false           // Para futuras verificaciones
-  },
-  isPrivate: {
-    type: Boolean,
-    default: false           // Perfiles privados
-  }
-}, {
-  timestamps: true,          // createdAt y updatedAt automáticos
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
-
-// Campos virtuales para contadores
-userSchema.virtual('followersCount').get(function() {
-  return this.followers.length;
-});
-
-userSchema.virtual('followingCount').get(function() {
-  return this.following.length;
-});
-
-// Índices compuestos para optimización
-userSchema.index({ username: 1, email: 1 });
-userSchema.index({ createdAt: -1 });
-```
-
-### 📝 Post Model - Esquema Avanzado
-
-```javascript
-const postSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true
-  },
-  content: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 280           // Límite de caracteres
-  },
-  image: {
-    type: String,
-    default: '',
-    validate: {
-      validator: function(v) {
-        return !v || /^https?:\/\/.+/.test(v);
-      },
-      message: 'URL de imagen inválida'
-    }
-  },
-  likes: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  comments: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Comment'
-  }],
-  tags: [{
-    type: String,
-    lowercase: true,
-    trim: true
-  }],
-  isDeleted: {
-    type: Boolean,
-    default: false           // Soft delete
-  },
-  visibility: {
-    type: String,
-    enum: ['public', 'followers', 'private'],
-    default: 'public'
-  }
-}, {
-  timestamps: true,
-  toJSON: { virtuals: true }
-});
-
-// Campos virtuales
-postSchema.virtual('likesCount').get(function() {
-  return this.likes.length;
-});
-
-postSchema.virtual('commentsCount').get(function() {
-  return this.comments.length;
-});
-
-// Middleware para actualizar contadores
-postSchema.pre('save', function(next) {
-  if (this.isModified('content')) {
-    // Extraer hashtags automáticamente
-    const hashtags = this.content.match(/#\w+/g);
-    this.tags = hashtags ? hashtags.map(tag => tag.slice(1)) : [];
-  }
-  next();
-});
-
-// Índices para optimización
-postSchema.index({ user: 1, createdAt: -1 });
-postSchema.index({ tags: 1 });
-postSchema.index({ createdAt: -1 });
-```
-
-### 💬 Comment Model - Sistema Avanzado
-
-```javascript
-const commentSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  post: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Post',
-    required: true,
-    index: true
-  },
-  content: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 280
-  },
-  likes: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  parentComment: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Comment',
-    default: null            // Para comentarios anidados
-  },
-  replies: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Comment'
-  }],
-  isDeleted: {
-    type: Boolean,
-    default: false
-  },
-  editedAt: {
-    type: Date,
-    default: null
-  }
-}, {
-  timestamps: true,
-  toJSON: { virtuals: true }
-});
-
-// Campo virtual para conteo de likes
-commentSchema.virtual('likesCount').get(function() {
-  return this.likes.length;
-});
-
-// Índices para búsquedas eficientes
-commentSchema.index({ post: 1, createdAt: -1 });
-commentSchema.index({ user: 1 });
-commentSchema.index({ parentComment: 1 });
-```
-
-### 🔔 Notification Model - Sistema Inteligente
-
-```javascript
-const notificationSchema = new mongoose.Schema({
-  from: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  to: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true
-  },
-  type: {
-    type: String,
-    required: true,
-    enum: [
-      'follow',              // Usuario te siguió
-      'like_post',           // Like en tu post
-      'like_comment',        // Like en tu comentario
-      'comment',             // Comentario en tu post
-      'reply',               // Respuesta a tu comentario
-      'mention'              // Mención en post/comentario
-    ]
-  },
-  post: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Post',
-    default: null
-  },
-  comment: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Comment',
-    default: null
-  },
-  isRead: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
-  readAt: {
-    type: Date,
-    default: null
-  }
-}, {
-  timestamps: true
-});
-
-// Índices compuestos para consultas eficientes
-notificationSchema.index({ to: 1, isRead: 1, createdAt: -1 });
-notificationSchema.index({ to: 1, type: 1 });
-
-// Middleware para evitar notificaciones duplicadas
-notificationSchema.pre('save', async function(next) {
-  if (this.isNew) {
-    const duplicate = await this.constructor.findOne({
-      from: this.from,
-      to: this.to,
-      type: this.type,
-      post: this.post,
-      comment: this.comment,
-      createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) } // Últimos 5 minutos
-    });
-    
-    if (duplicate) {
-      return next(new Error('Notification already exists'));
-    }
-  }
-  next();
-});
-```
-
----
 
 ## 🛣️ API Endpoints Completos
 
@@ -1143,68 +610,6 @@ sequenceDiagram
 - **Session Management**: Manejo seguro de sesiones de usuario
 - **Role-based Access**: Sistema de roles y permisos (futuro)
 
-```javascript
-// Ejemplo de middleware de autenticación
-const authMiddleware = async (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) return res.status(401).json({ error: 'Token requerido' });
-
-    const decoded = await verifyToken(token);
-    const user = await User.findOne({ clerkId: decoded.sub });
-    
-    if (!user) {
-      // Auto-sync si el usuario no existe
-      const clerkUser = await clerkClient.users.getUser(decoded.sub);
-      user = await createUserFromClerk(clerkUser);
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    res.status(401).json({ error: 'Token inválido' });
-  }
-};
-```
-
-### 🛡️ Arcjet Security Shield
-
-#### Protecciones Implementadas
-
-```javascript
-// Configuración de Arcjet
-const aj = arcjet({
-  key: process.env.ARCJET_KEY,
-  rules: [
-    // Rate limiting por IP
-    rateLimit({
-      mode: 'LIVE',
-      characteristics: ['ip'],
-      window: '1m',
-      max: 60
-    }),
-    
-    // Rate limiting por usuario autenticado
-    rateLimit({
-      mode: 'LIVE',
-      characteristics: ['userId'],
-      window: '1m',
-      max: 100
-    }),
-    
-    // Protección contra bots
-    detectBot({
-      mode: 'LIVE',
-      block: ['AUTOMATED']
-    }),
-    
-    // Protección de formularios
-    shield({
-      mode: 'LIVE'
-    })
-  ]
-});
-```
 
 #### Métricas de Seguridad
 - **Rate Limiting**: 60 requests/minuto por IP, 100/minuto por usuario
@@ -1227,44 +632,6 @@ const userUpdateValidation = {
   lastName: Joi.string().min(2).max(50),
   bio: Joi.string().max(160),
   location: Joi.string().max(100)
-};
-```
-
-### 🚨 Manejo de Errores
-
-```javascript
-// Sistema centralizado de manejo de errores
-class AppError extends Error {
-  constructor(message, statusCode, isOperational = true) {
-    super(message);
-    this.statusCode = statusCode;
-    this.isOperational = isOperational;
-    this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
-    
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
-
-// Middleware global de errores
-const globalErrorHandler = (err, req, res, next) => {
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
-
-  if (process.env.NODE_ENV === 'production') {
-    // En producción, no exponer stack traces
-    res.status(err.statusCode).json({
-      status: err.status,
-      message: err.isOperational ? err.message : 'Algo salió mal'
-    });
-  } else {
-    // En desarrollo, mostrar información completa
-    res.status(err.statusCode).json({
-      status: err.status,
-      error: err,
-      message: err.message,
-      stack: err.stack
-    });
-  }
 };
 ```
 
@@ -1323,91 +690,12 @@ cd Peluditos-App/server
 # 2. Instalar dependencias
 npm install
 
-# 3. Copiar archivo de ambiente
-cp .env.example .env
-# Editar .env con tus credenciales
-
-# 4. Verificar conexión a base de datos
-npm run db:check
-
-# 5. Ejecutar en modo desarrollo
+# 3. Ejecutar 
 npm run dev
 
-# 6. Ejecutar en modo producción
-npm run build
-npm start
+
 ```
 
-### 🔧 Scripts Disponibles
-
-```json
-{
-  "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "build": "echo 'Build completed'",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
-    "db:check": "node scripts/check-db-connection.js",
-    "db:seed": "node scripts/seed-database.js"
-  }
-}
-```
-
-### 🌐 Despliegue en Vercel
-
-#### Configuración automática:
-
-```json
-// vercel.json
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "src/server.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "src/server.js"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "functions": {
-    "src/server.js": {
-      "maxDuration": 30
-    }
-  }
-}
-```
-
-#### Comandos de despliegue:
-
-```bash
-# Instalar Vercel CLI
-npm i -g vercel
-
-# Login y configurar proyecto
-vercel login
-vercel
-
-# Configurar variables de entorno
-vercel env add MONGO_URI
-vercel env add CLERK_SECRET_KEY
-# ... resto de variables
-
-# Desplegar a producción
-vercel --prod
-```
-
----
 
 ## 🧪 Testing y Calidad
 
@@ -1437,91 +725,6 @@ npm run lint:fix
 npm run format
 ```
 
-### 📈 Monitoring y Logs
-
-#### Logs Estructurados
-
-```javascript
-const logger = require('./utils/logger');
-
-// Diferentes niveles de log
-logger.info('Usuario autenticado', { userId, action: 'login' });
-logger.warn('Rate limit alcanzado', { ip, endpoint });
-logger.error('Error en base de datos', { error: error.message, stack: error.stack });
-```
-
-#### Health Checks
-
-```javascript
-// Endpoint de salud del sistema
-app.get('/health', async (req, res) => {
-  const health = {
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    services: {
-      database: await checkDatabaseConnection(),
-      cloudinary: await checkCloudinaryConnection(),
-      clerk: await checkClerkConnection()
-    }
-  };
-  
-  res.status(200).json(health);
-});
-```
-
----
-
-## 🔮 Roadmap y Futuras Mejoras
-
-### 🎯 Versión 2.0 (Q1 2025)
-
-- [ ] **WebSockets en Tiempo Real**
-  - Notificaciones push instantáneas
-  - Chat privado entre usuarios
-  - Indicadores de presencia online
-
-- [ ] **Sistema de Búsqueda Avanzada**
-  - Búsqueda full-text con Elasticsearch
-  - Filtros por ubicación, tipo de mascota
-  - Sugerencias inteligentes
-
-- [ ] **Análiticas y Métricas**
-  - Dashboard de administración
-  - Métricas de engagement
-  - Reportes de uso
-
-### 🚀 Versión 2.5 (Q2 2025)
-
-- [ ] **Funcionalidades Premium**
-  - Perfiles verificados
-  - Funciones exclusivas para usuarios premium
-  - Monetización con suscripciones
-
-- [ ] **Inteligencia Artificial**
-  - Moderación automática de contenido
-  - Recomendaciones personalizadas
-  - Reconocimiento de razas en imágenes
-
-- [ ] **Aplicación Móvil Nativa**
-  - React Native o Flutter
-  - Notificaciones push nativas
-  - Funcionalidades offline
-
-### 🌟 Versión 3.0 (Q3 2025)
-
-- [ ] **Ecosistema Expandido**
-  - Marketplace de productos para mascotas
-  - Directorio de veterinarios
-  - Sistema de eventos y meetups
-
-- [ ] **Integración IoT**
-  - Conectividad con dispositivos de mascotas
-  - Tracking de salud y actividad
-  - Alertas automáticas
-
----
-
 ## 🤝 Contribución y Desarrollo
 
 ### 🔧 Guía para Contribuidores
@@ -1535,9 +738,6 @@ cd Peluditos-App/server
 
 # Instalar dependencias
 npm install
-
-# Configurar pre-commit hooks
-npm run prepare
 ```
 
 #### 2. Estándares de Código
